@@ -3,11 +3,17 @@ var Corsify = require('corsify')
 var jwt = require('jsonwebtoken')
 var AsyncCache = require('async-cache')
 
+var errors = {
+  'TokenExpiredError': 401,
+  'JsonWebTokenError': 401,
+  'NotBeforeError': 401
+}
+
 var cors = Corsify({
   'Access-Control-Allow-Headers': 'authorization, accept, content-type'
 })
 
-var Service = module.exports = function (opts) {
+module.exports = function (opts) {
   var prefix = opts.prefix || '/auth'
   var pubKeyUrl = opts.server + prefix + '/public-key'
   var cache = createCache(pubKeyUrl, opts.cacheDuration)
@@ -15,7 +21,7 @@ var Service = module.exports = function (opts) {
   function decode (token, cb) {
     cache.get('pubKey', function (err, pubKey) {
       if (err) return cb(err)
-      jwt.verify(token, pubKey, {algorithms: ['RS256']}, cb)
+      jwt.verify(token, pubKey, { algorithms: ['RS256'] }, cb)
     })
   }
 
@@ -25,8 +31,8 @@ var Service = module.exports = function (opts) {
       if (!authHeader) return setImmediate(cb)
       var token = authHeader.slice(7)
       decode(token, function (err, authData) {
-        if (err && err.name === 'TokenExpiredError') err.statusCode = 401
-        cb(err, authData)
+        if (err) err.statusCode = errors[err.name] || 500
+        return cb(err, authData)
       })
     })(req, res)
   }
@@ -42,7 +48,7 @@ function createCache (pubKeyUrl, cacheDuration) {
       jsonist.get(pubKeyUrl, function (err, body) {
         if (err) return cb(err)
 
-        var pubKey = ((body||{}).data||{}).publicKey
+        var pubKey = ((body || {}).data || {}).publicKey
         if (!pubKey) return cb(new Error('Could not retrieve public key'))
 
         cb(null, pubKey)
