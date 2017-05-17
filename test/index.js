@@ -103,7 +103,7 @@ tape('should handle \'TokenExpiredError\'', function (t) {
       t.equal(parsed.name, 'TokenExpiredError', 'should have correct name')
       t.end()
     })
-  }, 5)
+  }, 5) // token expired ~= 4ms ago
 })
 
 tape('should handle \'NotBeforeError\'', function (t) {
@@ -132,10 +132,11 @@ tape('should handle \'NotBeforeError\'', function (t) {
 
 tape('should handle auth token', function (t) {
   var now = new Date().getTime()
-  var expiresInMs = now + ms('30 days')
-  var payload = { email: 'chet@scalehaus.io', exp: expiresInMs }
+  var month = '30 days'
+  var expiresInMs = now + ms(month)
+  var payload = { email: 'chet@scalehaus.io' }
   // https://github.com/auth0/node-jsonwebtoken#token-expiration-exp-claim
-  var token = jwt.sign(payload, privateKey, { algorithm: 'RS256' })
+  var token = jwt.sign(payload, privateKey, { algorithm: 'RS256', expiresIn: month })
 
   var opts = {
     method: 'GET',
@@ -149,7 +150,7 @@ tape('should handle auth token', function (t) {
     var data = JSON.parse(res.body)
 
     t.equal(data.email, 'chet@scalehaus.io', 'should have correct email')
-    t.equal(data.exp, expiresInMs, 'should have correct exp claim')
+    t.equal(data.exp, ~~(expiresInMs / 1000), 'should have correct exp claim')
     t.equal(data.iat, ~~(now / 1000), 'should have correct iat')
 
     t.end()

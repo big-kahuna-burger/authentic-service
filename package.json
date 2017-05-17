@@ -20,6 +20,7 @@
     "jsonwebtoken": "^5.4.1"
   },
   "devDependencies": {
+    "ms": "^2.0.0",
     "servertest": "^1.2.1",
     "tape": "^4.2.2"
   },
